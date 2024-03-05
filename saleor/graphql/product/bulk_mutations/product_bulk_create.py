@@ -763,7 +763,7 @@ class ProductBulkCreate(BaseMutation):
                 )
 
             if variants_data := cleaned_input.pop("variants", None):
-                variants_input_data.extend(variants_data)
+                variants_input_data.append((product, variants_data))
 
         models.Product.objects.bulk_create(products_to_create)
         models.ProductMedia.objects.bulk_create(media_to_create)
@@ -772,8 +772,8 @@ class ProductBulkCreate(BaseMutation):
         for product, attributes in attributes_to_save:
             ProductAttributeAssignmentMixin.save(product, attributes)
 
-        if variants_input_data:
-            variants = cls.save_variants(info, variants_input_data)
+        for product, variants_to_create in variants_input_data:
+            variants.extend(cls.save_variants(info, variants_to_create, product))
 
         return variants, updated_channels
 
@@ -815,8 +815,10 @@ class ProductBulkCreate(BaseMutation):
         )
 
     @classmethod
-    def save_variants(cls, info, variants_input_data):
-        return ProductVariantBulkCreate.save_variants(info, variants_input_data, None)
+    def save_variants(cls, info, variants_input_data, product):
+        return ProductVariantBulkCreate.save_variants(
+            info, variants_input_data, product
+        )
 
     @classmethod
     def prepare_media(cls, info, product, media_inputs, media_to_create):
